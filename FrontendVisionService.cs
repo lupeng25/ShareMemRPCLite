@@ -89,8 +89,15 @@ namespace ShareMemRPCLite
                 return;
             }
 
-            byte[] imageBytes = BitmapToJpegBytes(e.Image);
-            NotifyGrabImageSucceeded(imageBytes, e.CamID);
+            try
+            {
+                byte[] imageBytes = BitmapToJpegBytes(e.Image);
+                NotifyGrabImageSucceeded(imageBytes, e.CamID);
+            }
+            finally
+            {
+                e.Image.Dispose();
+            }
         }
 
         private byte[] BitmapToJpegBytes(Bitmap bitmap)
