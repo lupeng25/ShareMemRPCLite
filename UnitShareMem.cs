@@ -436,9 +436,9 @@ namespace ShareMemRPCLite
                 int cam = 0;
                 if (type == ShareMemPrmType.Image)
                 {
-                    if (order.Contains("'"))
+                    if (order.Contains(",") || order.Contains("'"))
                     {
-                        string[] splitC = order.Split('\'');
+                        string[] splitC = order.Split(new[] { ',', '\'' }, StringSplitOptions.RemoveEmptyEntries);
                         int mainCam;
                         if (int.TryParse(splitC[0], out mainCam))
                         {
