@@ -97,14 +97,15 @@ namespace ShareMemRPCLite
             {
                 if (subscribeAllCams)
                 {
+                    List<int> camIdsToUnsubscribe;
                     lock (syncRoot)
                     {
-                        foreach (int subscribedCamId in subscribedCamIds)
-                        {
-                            gVision.SetReceiveBitmapCamIndex(subscribedCamId, false);
-                        }
+                        camIdsToUnsubscribe = new List<int>(subscribedCamIds);
+                    }
 
-                        subscribedCamIds.Clear();
+                    foreach (int subscribedCamId in camIdsToUnsubscribe)
+                    {
+                        gVision.SetReceiveBitmapCamIndex(subscribedCamId, false);
                     }
                 }
                 else
@@ -115,6 +116,20 @@ namespace ShareMemRPCLite
             catch (Exception ex)
             {
                 OnError(string.Format("Realtime unsubscribe failed: {0}", ex.Message), ex);
+            }
+            finally
+            {
+                lock (syncRoot)
+                {
+                    if (subscribeAllCams)
+                    {
+                        subscribedCamIds.Clear();
+                    }
+                    else
+                    {
+                        subscribedCamIds.Remove(camId);
+                    }
+                }
             }
         }
 
