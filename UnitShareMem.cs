@@ -342,11 +342,6 @@ namespace ShareMemRPCLite
                 return -2;
             }
 
-            if (needStartListenImageAndError > 3)
-            {
-                return -9;
-            }
-
             Dictionary<int, SOneCamShareMem> shareMap = GetRunShareDic();
             if (shareMap == null || shareMap.Count == 0)
             {
@@ -372,7 +367,7 @@ namespace ShareMemRPCLite
 
         public int CheckStartListenImage()
         {
-            if (HasBitmapCtl && needStartListenImageAndError > 0 && !isListenImage)
+            if (HasBitmapCtl && !isListenImage)
             {
                 return StartListenImage();
             }
