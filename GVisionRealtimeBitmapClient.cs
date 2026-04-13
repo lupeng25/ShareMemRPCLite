@@ -195,7 +195,16 @@ namespace ShareMemRPCLite
             try
             {
                 gVision.CheckAndInvokeGVision();
+                if (disposed || !started)
+                {
+                    return;
+                }
+
                 EnsureCameraSubscriptions();
+                if (disposed || !started)
+                {
+                    return;
+                }
 
                 try
                 {
@@ -229,27 +238,36 @@ namespace ShareMemRPCLite
 
         private void EnsureSingleCamSubscription(int targetCamId)
         {
+            Exception subscribeError = null;
+
             lock (syncRoot)
             {
+                if (disposed || !started)
+                {
+                    return;
+                }
+
                 if (subscribedCamIds.Contains(targetCamId))
                 {
                     return;
                 }
-            }
 
-            try
-            {
-                if (gVision.SetReceiveBitmapCamIndex(targetCamId, true))
+                try
                 {
-                    lock (syncRoot)
+                    if (gVision.SetReceiveBitmapCamIndex(targetCamId, true))
                     {
                         subscribedCamIds.Add(targetCamId);
                     }
                 }
+                catch (Exception ex)
+                {
+                    subscribeError = ex;
+                }
             }
-            catch (Exception ex)
+
+            if (subscribeError != null)
             {
-                OnError(string.Format("Subscribe Cam{0} failed: {1}", targetCamId, ex.Message), ex);
+                OnError(string.Format("Subscribe Cam{0} failed: {1}", targetCamId, subscribeError.Message), subscribeError);
             }
         }
 
