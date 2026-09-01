@@ -2,6 +2,13 @@
 
 `GKG.ShareMemRPCLite` 是从 `RPC.CShape` 中拆分出的轻量级 C# 通信库，专注于和 `GVisionQt` 的共享内存通信。
 
+## 工程入口
+
+- `GKG.ShareMemRPCLite.csproj`：原有 .NET Framework 4.5.2 工程，供 CameraShow 等旧框架项目使用。
+- `GKG.ShareMemRPCLite.Net9.csproj`：.NET 9 Windows 工程，供 GVision 正式插件和 AVAVision 使用。
+
+两个工程直接编译同一套源码；不得再在消费项目中复制并独立修改通信源码。
+
 ## 能力范围
 
 - 启动/重连 `GVisionQt`
