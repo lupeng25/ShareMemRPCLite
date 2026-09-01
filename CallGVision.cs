@@ -144,7 +144,7 @@ namespace ShareMemRPCLite
 
         public void ReceiveShowImageOnce(int camId)
         {
-            ShareMemBaseMgr.Ins.ShareMem.TempReceiveImg = camId;
+            ShareMemBaseMgr.Ins.ShareMem.ReceiveImageOnce(camId);
         }
 
         public bool SetReceiveBitmapCamIndex(int camId, bool isAllowReceive)

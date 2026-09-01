@@ -51,8 +51,9 @@ using (var gv = new CallGVision(isInvokeGVision: true))
 
 它会自动处理：
 
-- 启动后定时补订阅
+- 启动时建立订阅，并定时检查连接状态
 - `GVisionQt` 后启动场景的自动恢复
+- 首次订阅或重连后主动接收当前已显示帧
 - 事件解绑与资源释放
 
 ```csharp

@@ -41,6 +41,8 @@ namespace ShareMemRPCLite
         public const string SplitKey = ";^";
 
         private readonly object runShareLock = new object();
+        private readonly object receiveImageOnceLock = new object();
+        private readonly HashSet<int> receiveImageOnceCamIds = new HashSet<int>();
         private MemoryMappedFile connMappedFile;
         private MemoryMappedViewAccessor connAccessor;
         private IntPtr connDoHandle = IntPtr.Zero;
@@ -55,8 +57,6 @@ namespace ShareMemRPCLite
         public Func<bool> ReSendBitmapCamIndexFunc { get; set; }
 
         public bool HasBitmapCtl { get; set; }
-
-        public int TempReceiveImg { get; set; } = -1;
 
         public string EXEPath { get; private set; }
 
@@ -377,6 +377,31 @@ namespace ShareMemRPCLite
         public void StopListenImage()
         {
             isListenImage = false;
+            lock (receiveImageOnceLock)
+            {
+                receiveImageOnceCamIds.Clear();
+            }
+        }
+
+        public void ReceiveImageOnce(int camId)
+        {
+            if (camId < 0)
+            {
+                return;
+            }
+
+            lock (receiveImageOnceLock)
+            {
+                receiveImageOnceCamIds.Add(camId);
+            }
+        }
+
+        private bool TryConsumeReceiveImageOnce(int camId)
+        {
+            lock (receiveImageOnceLock)
+            {
+                return receiveImageOnceCamIds.Remove(camId);
+            }
         }
 
         private GVisionRtnCode RetryInit()
@@ -542,33 +567,54 @@ namespace ShareMemRPCLite
         {
             while (isListenImage)
             {
-                if (!runShareDic.ContainsKey(port))
+                SOneCamShareMem share;
+                lock (runShareLock)
                 {
-                    Thread.Sleep(20);
-                    continue;
+                    if (!runShareDic.TryGetValue(port, out share)
+                        || share.ImageFinishHandle == IntPtr.Zero
+                        || share.ImageAccessor == null)
+                    {
+                        share = null;
+                    }
                 }
 
-                SOneCamShareMem share = runShareDic[port];
-                if (share.ImageFinishHandle == IntPtr.Zero || share.ImageAccessor == null)
+                if (share == null)
                 {
                     Thread.Sleep(20);
                     continue;
                 }
 
                 uint waitResult = WaitForSingleObject(share.ImageFinishHandle, 20);
-                bool shouldRead = TempReceiveImg == port || (waitResult == 0 && HasBitmapCtl && WhenReceiveBitmap != null);
+                bool receiveOnce = TryConsumeReceiveImageOnce(port);
+                bool shouldRead = receiveOnce || (waitResult == 0 && HasBitmapCtl && WhenReceiveBitmap != null);
                 if (!shouldRead)
                 {
                     Thread.Sleep(5);
                     continue;
                 }
 
-                if (TempReceiveImg == port)
+                Bitmap bitmap = null;
+                bool retryReceiveOnce = false;
+                lock (runShareLock)
                 {
-                    TempReceiveImg = -1;
+                    SOneCamShareMem currentShare;
+                    if (runShareDic.TryGetValue(port, out currentShare)
+                        && ReferenceEquals(currentShare, share)
+                        && currentShare.ImageAccessor != null)
+                    {
+                        bitmap = TryReadBitmap(currentShare);
+                    }
+                    else
+                    {
+                        retryReceiveOnce = receiveOnce;
+                    }
                 }
 
-                Bitmap bitmap = TryReadBitmap(share);
+                if (retryReceiveOnce)
+                {
+                    ReceiveImageOnce(port);
+                }
+
                 if (bitmap != null)
                 {
                     EventHandler<ReceiveBitmapEventArgs> handler = WhenReceiveBitmap;

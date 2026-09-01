@@ -31,6 +31,7 @@ namespace ShareMemRPCLite
         private readonly int subscribeMaxCamId;
         private readonly Timer ensureTimer;
         private readonly HashSet<int> subscribedCamIds = new HashSet<int>();
+        private readonly HashSet<int> pendingInitialFrameCamIds = new HashSet<int>();
         private int ensureRunning;
         private bool started;
         private bool disposed;
@@ -129,6 +130,7 @@ namespace ShareMemRPCLite
                     {
                         subscribedCamIds.Remove(camId);
                     }
+                    pendingInitialFrameCamIds.Clear();
                 }
             }
         }
@@ -157,6 +159,13 @@ namespace ShareMemRPCLite
 
         private void GVision_WhenInvokeGVision(object sender, EventArgs e)
         {
+            lock (syncRoot)
+            {
+                foreach (int subscribedCamId in subscribedCamIds)
+                {
+                    pendingInitialFrameCamIds.Add(subscribedCamId);
+                }
+            }
             ScheduleEnsure();
         }
 
@@ -209,7 +218,7 @@ namespace ShareMemRPCLite
                 try
                 {
                     gVision.CheckStartListenImage();
-                    gVision.UpdateBitmapCamIndex();
+                    RequestPendingInitialFrames();
                 }
                 catch (Exception ex)
                 {
@@ -257,6 +266,7 @@ namespace ShareMemRPCLite
                     if (gVision.SetReceiveBitmapCamIndex(targetCamId, true))
                     {
                         subscribedCamIds.Add(targetCamId);
+                        pendingInitialFrameCamIds.Add(targetCamId);
                     }
                 }
                 catch (Exception ex)
@@ -268,6 +278,21 @@ namespace ShareMemRPCLite
             if (subscribeError != null)
             {
                 OnError(string.Format("Subscribe Cam{0} failed: {1}", targetCamId, subscribeError.Message), subscribeError);
+            }
+        }
+
+        private void RequestPendingInitialFrames()
+        {
+            List<int> pendingCamIds;
+            lock (syncRoot)
+            {
+                pendingCamIds = new List<int>(pendingInitialFrameCamIds);
+                pendingInitialFrameCamIds.Clear();
+            }
+
+            foreach (int pendingCamId in pendingCamIds)
+            {
+                gVision.ReceiveShowImageOnce(pendingCamId);
             }
         }
 
