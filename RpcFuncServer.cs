@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ShareMemRPCLite
 {
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct SharedFuncHeader
     {
         public int request_head;
@@ -17,7 +17,7 @@ namespace ShareMemRPCLite
         public int response_tail;
     }
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    [StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
     public struct SharedFuncBlock
     {
         public long request_id;
